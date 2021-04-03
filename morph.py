@@ -8,35 +8,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 image_name = "test_dummy_bin_bla_2048_2048.png"
-# kernels for morph transformation, if == 0 kernel will be ignored
-KER_ER1 = np.ones((3, 3), np.uint8)  # for humid (3,3); for dry (2,2)
-KER_DI1 = np.ones((30, 30), np.uint8)  # for humid (30,30); for dry (20,20)
-KER_ER2 = np.ones((7, 7), np.uint8)
-KER_DI2 = 0  # np.ones((1,1),np.uint8)
-# add space on left(x) and top(y) of contour bounding box for cut out
-X_ADD = 50
-Y_ADD = 50
-# gps_matrix - does not work for full folder, as the matrix changes depending on
-# the coordinates of the mask_slice
-GPS_TRANS = 0  # ortho.transform #if == 0, df_cnt['gps'] = 0
-# min/max area for contours to be relevant
-MIN_AREA = 4600  # smaller is often grass
-MAX_AREA = 250000  # larger is often black area outside picture
-LINES = 1  # 1 if you want to get line approximation in df
-
 
 # TODO get position in ortho from image name
-def get_xy_mask(name):
+def _get_xy_mask(name):
     s = []
     s = name.split(sep='_')
     x = int(s[-2])
     y = int(s[-1])
     return x, y
 
-
-# morphological transformation
-# uses dilation and erosion based on the input chosen, i.e., input other than 0 enables that particular kernel
 def _morph(img, kernel_er1, kernel_di1, kernel_er2, kernel_di2):
+    '''morphological transformation
+
+    uses dilation and erosion based on the input chosen, 
+    i.e., input other than 0 enables that particular kernel
+
+    Parameters
+    ----------
+    bin_mask : np.Array (width, height, 1)
+        Binary mask of shadows. White pixels are 1 and black pixels are 0. 
+    kernel_er1 : 
+
+
+    
+    '''
+
     if str(kernel_er1) != '0':
         img = cv2.erode(img, kernel_er1, iterations=1)
     if str(kernel_di1) != '0':
@@ -50,7 +46,7 @@ def _morph(img, kernel_er1, kernel_di1, kernel_er2, kernel_di2):
 
 
 # This function is used to calculate the centroid of the contours
-def center(contour):
+def _center(contour):
     M = cv2.moments(contour)
     cx = int(M['m10'] / M['m00'])
     cy = int(M['m01'] / M['m00'])
@@ -58,7 +54,7 @@ def center(contour):
 
 
 # An explanation of the working of this function would be helpful.
-def fit_line(crop_bin_imgs):
+def _fit_line(crop_bin_imgs):
     line_xy = []
     line_lengths = []
     for crop_bin_img in crop_bin_imgs:
@@ -90,7 +86,7 @@ def fit_line(crop_bin_imgs):
     return line_xy, line_lengths
 
 
-def draw_contours(img_name, mask, mask_rgb, gps_trans, min_area, max_area):
+def _draw_contours(img_name, mask, mask_rgb, gps_trans, min_area, max_area):
     mask, contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # create df
     features = {"name": [], "gps": [], "x_ortho": [], "y_ortho": [], "x_mask": [], "y_mask": [], "w_bb": [], "h_bb": [],
@@ -100,7 +96,7 @@ def draw_contours(img_name, mask, mask_rgb, gps_trans, min_area, max_area):
     for c in contours:
         features["name"].append(img_name + "_cnt_" + str(i))
         x, y, w, h = cv2.boundingRect(c)
-        x_mask, y_mask = get_xy_mask(img_name)
+        x_mask, y_mask = _get_xy_mask(img_name)
         x_cnt = x + x_mask
         y_cnt = y + y_mask
         if gps_trans != 0:
@@ -115,7 +111,7 @@ def draw_contours(img_name, mask, mask_rgb, gps_trans, min_area, max_area):
         features["h_bb"].append(h)
         features["perimeter"].append(cv2.arcLength(c, True))  # true is used when a closed contour is used as an input
         features["area"].append(cv2.contourArea(c))
-        features["centroid"].append(center(c))
+        features["centroid"].append(_center(c))
         i += 1
         if min_area < cv2.contourArea(c) < max_area:
             f_contours.append(c)
@@ -127,22 +123,68 @@ def draw_contours(img_name, mask, mask_rgb, gps_trans, min_area, max_area):
 
     return df_feat
 
+def _crop_shadows(df, bin_mask, rgb_img, x_add, y_add, x_side, y_side):
+    '''
+    Parameters
+    ----------
+    df : pd.DataFrame
+    bin_mask : np.Array (width, height, 1)
+        Binary mask of shadows. White pixels are 1 and black pixels are 0. 
+        Size is equal to image size.
+    rgb_img : np.Array (width, height, 3)
+        Corresponding RGB-image for binary mask. Used to cut out shadows
+        that need to be classified.
+    
+    x_add : int (default = 0)
+        add space on the left or rigth of the contour bounding 
+        box for better recognizability of the plant in the cut out
+    y_add : int (default = 0)
+        add space on the top or buttom of the contour bounding 
+        box for better recognizability of the plant in the cut out
+    x_side : str (default = 'left')
+        side - left or right - to which the space is added
+    y_side : str (default = 'top')
+        side - top or buttom - to which the space is added
+    '''
+    
+    x_max, y_max = rgb_img.shape
 
-# what are the input parameters x_add and y_add ?
-def crop_shadows(df, bin_img, rgb_img, x_add, y_add):
     bin_imgs = []
     rgb_imgs = []
+    # check for all contours in the dataFrame
     for i in df.index:
-        if df['y_mask'][i] > y_add:
-            y = df['y_mask'][i] - y_add
+        # adjust top left coordinates of the contour bounding box
+        # top or buttom
+        if y_side == 'top':
+            if df['y_mask'][i] > y_add:
+                y = df['y_mask'][i] - y_add
+            else:
+                y = 0
+        elif y_side == 'below':
+            y = df['y_mask'][i]
+        # left or right
+        if x_side == 'left':
+            if df['x_mask'][i] > x_add:
+                x = df['x_mask'][i] - x_add
+            else:
+                x = 0
+        elif x_side == 'right':
+            y = df['x_mask'][i]
+        # adjust bounding box heigth or width
+        # heigth
+        if (y + df['h_bb'][i] + y_add) < y_max:
+            y2 = y + df['h_bb'][i] + y_add
         else:
-            y = 0
-        if df['x_mask'][i] > x_add:
-            x = df['x_mask'][i] - x_add
+            y2 = y_max
+        # width
+        if (x + df['w_bb'][i] + x_add) < x_max:
+            x2 = x + df['w_bb'][i] + x_add
         else:
-            x = 0
-        bin_imgs.append(bin_img[y:y + df['h_bb'][i] + y_add, x:x + df['w_bb'][i] + x_add])
-        rgb_imgs.append(rgb_img[y:y + df['h_bb'][i] + y_add, x:x + df['w_bb'][i] + x_add][:])
+            x2 = x_max
+        # cut out contours from binary masks and 
+        # rgb image
+        bin_imgs.append(bin_mask[y:y2, x:x2])
+        rgb_imgs.append(rgb_img[y:y2, x:x2][:])
     return bin_imgs, rgb_imgs
 
 
@@ -157,9 +199,11 @@ def get_shadows(
         KER_DI2=0,
         X_ADD=50,
         Y_ADD=50,
+        X_SIDE='left',
+        Y_SIDE='top',
         MIN_AREA=4600,  # smaller is often grass
         MAX_AREA=250000  # larger is often black area outside picture
-):
+        ):
     """Cut out shadows after morphological transformation
 
     Function to do morphological transformation on binary masks.
@@ -177,10 +221,33 @@ def get_shadows(
         that need to be classified.
     image_name : str
         String of image name, following the convention...
-    trans_matrix : 
+    trans_matrix : (default = 0)
         Transformation matrix with coordinates for...
-    DEFAULT
-    ???
+        the coordinates of the mask_slice
+        if == 0, df_cnt['gps'] = 0
+    
+    KER_ER1 : np.Array (default = np.ones((3, 3), np.uint8))
+    KER_DI1 : np.Array (default = np.ones((30, 30), np.uint8))
+    KER_ER2 : np.Array (default = np.ones((7, 7), np.uint8))
+    KER_DI2 : np.Array (default = 0)
+        Kernels for morph transformation. If == 0, kernel will be ignored.
+        By activating the respective kernel, the order and amplitude of
+        the morphological transformation can be targeted.
+    X_ADD : int (default = 0)
+        add space on the left or rigth of the contour bounding 
+        box for better recognizability of the plant in the cut out
+    Y_ADD : int (default = 0)
+        add space on the top or buttom of the contour bounding 
+        box for better recognizability of the plant in the cut out
+    X_SIDE : str (default = 'left')
+        side - left or right - to which the space is added
+    Y_SIDE : str (default = 'top')
+        side - top or buttom - to which the space is added
+    MIN_AREA : int (default = 4600)  
+        min area for contours to be relevant, smaller is often grass
+    MAX_AREA : int (default = 25000)  
+        max area for contours to be relevant, larger is often 
+        black area outside of the picture
 
     Returns
     -------
@@ -195,17 +262,14 @@ def get_shadows(
         order as list (area, bounding box, perimeter etc.) 
     """
 
-    # mask_gray = cv2.cvtColor(mask,cv2.COLOR_BGR2GRAY)
-    # ret,mask_bin = cv2.threshold(mask_gray,127,255,cv2.THRESH_BINARY)
-
     # morphological transformation
     mask_morph = _morph(bin_mask, KER_ER1, KER_DI1, KER_ER2, KER_DI2)
     # extract contour df
-    df_cnt = draw_contours(image_name, mask_morph, image, trans_matrix, MIN_AREA, MAX_AREA)
+    df_cnt = _draw_contours(image_name, mask_morph, image, trans_matrix, MIN_AREA, MAX_AREA)
     # cut out contours
-    bin_cuts, rgb_cuts = crop_shadows(df_cnt, mask_morph, image, X_ADD, Y_ADD)
+    bin_cuts, rgb_cuts = _crop_shadows(df_cnt, mask_morph, image, X_ADD, Y_ADD, X_SIDE, Y_SIDE)
     # get lines
-    # where_lines, line_lengths = fit_line(bin_cuts)
+    # where_lines, line_lengths = _fit_line(bin_cuts)
     # df_cnt["line"] = where_lines
     # df_cnt["l_length"] = line_lengths
 
