@@ -9,15 +9,9 @@ import matplotlib.pyplot as plt
 
 image_name = "test_dummy_bin_bla_2048_2048.png"
 
-# TODO get position in ortho from image name
-def _get_xy_mask(name):
-    s = []
-    s = name.split(sep='_')
-    x = int(s[-2])
-    y = int(s[-1])
-    return x, y
 
-def _morph(img, kernel_er1, kernel_di1, kernel_er2, kernel_di2):
+
+def _morph(bin_mask, kernel_er1, kernel_di1, kernel_er2, kernel_di2):
     '''morphological transformation
 
     uses dilation and erosion based on the input chosen, 
@@ -27,32 +21,69 @@ def _morph(img, kernel_er1, kernel_di1, kernel_er2, kernel_di2):
     ----------
     bin_mask : np.Array (width, height, 1)
         Binary mask of shadows. White pixels are 1 and black pixels are 0. 
-    kernel_er1 : 
+    kernel_er1 : np.Array (default = np.ones((3, 3), np.uint8))
+    kernel_di1 : np.Array (default = np.ones((30, 30), np.uint8))
+    kernel_er2 : np.Array (default = np.ones((7, 7), np.uint8))
+    kernel_di2 : np.Array (default = 0)
+        Kernels for morph transformation. If == 0, kernel will be ignored.
+        By activating the respective kernel, the order and amplitude of
+        the morphological transformation can be targeted.
 
-
-    
+    Return
+    ------
+    bin_mask : np.Array (width, height, 1)
+        Binary mask of shadows in white. Single pixels are erased by
+        erosion and small contour parts are combined into a large
+        contour by dilation.
     '''
 
     if str(kernel_er1) != '0':
-        img = cv2.erode(img, kernel_er1, iterations=1)
+        bin_mask = cv2.erode(bin_mask, kernel_er1, iterations=1)
     if str(kernel_di1) != '0':
-        img = cv2.dilate(img, kernel_di1, iterations=1)
+        bin_mask = cv2.dilate(bin_mask, kernel_di1, iterations=1)
     if str(kernel_er2) != '0':
-        img = cv2.erode(img, kernel_er2, iterations=1)
+        bin_mask = cv2.erode(bin_mask, kernel_er2, iterations=1)
     if str(kernel_di2) != '0':
-        img = cv2.dilate(img, kernel_di2, iterations=1)
-    # print('morph done.')
-    return img
+        bin_mask = cv2.dilate(bin_mask, kernel_di2, iterations=1)
+    return bin_mask
 
-
-# This function is used to calculate the centroid of the contours
 def _center(contour):
+    '''calculate the centroid of the contours
+
+    Parameters
+    ----------
+    contour : ??? # TODO check
+        contour
+    
+    Returns
+    -------
+    cx : int
+        x coordinate of contour center
+    cy : int
+        y coordinate of contour center
+    '''
+
     M = cv2.moments(contour)
     cx = int(M['m10'] / M['m00'])
     cy = int(M['m01'] / M['m00'])
     return cx, cy
 
+# TODO get position in ortho from image name
+def _get_xy_mask(image_name):
+    '''
 
+    Parameters
+    ----------
+    image_name : str
+        image name, following the convention: blablabla_x_y.png 
+        The blablabla part can be anything.
+    '''
+    s = []
+    s = image_name.split(sep='_')
+    x = int(s[-2])
+    y = int(s[-1])
+    return x, y
+    
 # An explanation of the working of this function would be helpful.
 def _fit_line(crop_bin_imgs):
     line_xy = []
@@ -220,7 +251,8 @@ def get_shadows(
         Corresponding RGB-image for binary mask. Used to cut out shadows
         that need to be classified.
     image_name : str
-        String of image name, following the convention...
+        image name, following the convention: blablabla_x_y.png 
+        The blablabla part can be anything.
     trans_matrix : (default = 0)
         Transformation matrix with coordinates for...
         the coordinates of the mask_slice
