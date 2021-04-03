@@ -184,7 +184,7 @@ def get_shadows(
     rgb_cuts : list of np.Array [[w, h, 3],...]
         list of the shadows that were cropped out from rgb image 
         → used for classification
-    df_cnt : pd.DataFrame
+    df_morph : pd.DataFrame
         dataframe with information on shadow contours in the same 
         order as list (area, bounding box, perimeter etc.) 
     """
@@ -215,3 +215,5 @@ if __name__ == "__main__":
     image_name = image_name[:-4]
     bin_cuts, rgb_cuts, df_morph = get_shadows(bin_mask, image, image_name, GPS_TRANS)
     print(df_morph)
+    plt.imshow(rgb_cuts[0])
+    plt.show()
