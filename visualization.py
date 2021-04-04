@@ -1,9 +1,6 @@
-import os
+
 import cv2
-import skimage
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+
 from skimage.color import label2rgb
 from skimage.measure import label
 

@@ -228,8 +228,8 @@ def _crop_shadows(df, bin_mask, image, x_add, y_add, x_side, y_side):
             y = df['x_mask'][i]
         else:
             raise ValueError("x_side must be specified as 'left' or 'right'")
-        # adjust bounding box heigth or width
-        # heigth
+        # adjust bounding box height or width
+        # height
         if (y + df['h_bb'][i] + y_add) < y_max:
             y2 = y + df['h_bb'][i] + y_add
         else:
