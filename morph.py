@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-
 import math
 import cv2
+import os
+import h5py
 
+import tensorflow as tf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -91,7 +93,7 @@ def fit_line(crop_bin_imgs):
 
 
 def draw_contours(img_name, mask, mask_rgb, gps_trans, min_area, max_area):
-    mask, contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # create df
     features = {"name": [], "gps": [], "x_ortho": [], "y_ortho": [], "x_mask": [], "y_mask": [], "w_bb": [], "h_bb": [],
                 "perimeter": [], "area": [], "centroid": []}
@@ -159,7 +161,7 @@ def get_shadows(
         Y_ADD=50,
         MIN_AREA=4600,  # smaller is often grass
         MAX_AREA=250000  # larger is often black area outside picture
-):
+ ):
     """Cut out shadows after morphological transformation
 
     Function to do morphological transformation on binary masks.
@@ -211,6 +213,19 @@ def get_shadows(
 
     return bin_cuts, rgb_cuts, df_cnt
 
+def classify_shadows(rgb_shadows, df_shadows, weights_path):
+    # load trained model with weights
+    os.chdir(weights_path)
+    model = tf.keras.applications.DenseNet121(include_top=True, classes=3, pooling=None)
+    model.load_weights(weights_path)
+    # predict rgb_cuts with loaded model
+    classes = []
+    confidence_scores = []
+    predictions = model.predict(rgb_shadows)
+    score = tf.nn.softmax(predictions[0])
+    # class + confidence in liste speichern
+    # results als neue colums dem df hinzufuegen
+    return df_shadows
 
 if __name__ == "__main__":
     bin_mask = (cv2.imread(image_name, cv2.IMREAD_GRAYSCALE) / 255).astype(np.uint8)
@@ -224,3 +239,5 @@ if __name__ == "__main__":
     print(df_morph)
     plt.imshow(rgb_cuts[0])
     plt.show()
+    model_dir = 'MyDrive/WildTech_01/model_evaluation/results/DenseNet121/Adam'
+    classify_shadows(rgb_cuts, df_morph, model_dir)
