@@ -211,6 +211,19 @@ def get_shadows(
 
     return bin_cuts, rgb_cuts, df_cnt
 
+def classify_shadows(rgb_shadows, df_shadows, weights_path):
+    # load trained model with weights
+    os.chdir(weights_path)
+    model = tf.keras.applications.DenseNet121(include_top=True, classes=3, pooling=None)
+    model.load_weights(weights_path)
+    # predict rgb_cuts with loaded model
+    classes = []
+    confidence_scores = []
+    predictions = model.predict(rgb_shadows)
+    score = tf.nn.softmax(predictions[0])
+    # class + confidence in liste speichern
+    # results als neue colums dem df hinzufuegen
+    return df_shadows
 
 if __name__ == "__main__":
     bin_mask = (cv2.imread(image_name, cv2.IMREAD_GRAYSCALE) / 255).astype(np.uint8)
