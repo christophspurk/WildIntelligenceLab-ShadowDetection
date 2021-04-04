@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 import math
-
 import cv2
-import pandas as pd
-import numpy as np
 
-import rasterio as rio
+import numpy as np
+import pandas as pd
+
 
 
 def _morph(bin_mask, kernel_er1, kernel_di1, kernel_er2, kernel_di2):
@@ -394,19 +393,3 @@ def get_shadows(
     # reset index
     df_cnt = df_cnt.reset_index(drop=True)
     return bin_cuts, rgb_cuts, df_cnt
-
-
-# for testing purposes
-if __name__ == "__main__":
-    path = "./test_data/bin_transparent_mosaic_45056_6144.png"
-    img_path = "./test_data/rgb_transparent_mosaic_45056_6144.png"
-
-    # bin_mask = (cv2.imread(path, cv2.IMREAD_GRAYSCALE)/255).astype(np.uint8)
-    bin_mask = (cv2.imread(path) / 255)[:, :, 1].astype(np.uint8)
-    image = cv2.imread(img_path)
-    image_name = img_path[16:-4]
-    trans_matrix = rio.open('./test_data/ortho.tif').transform
-
-    bin_cuts, rgb_cuts, df_morph = get_shadows(bin_mask, image, image_name,
-                                               trans_matrix)
-    print(df_morph)
