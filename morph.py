@@ -314,6 +314,7 @@ def classify_shadows(rgb_shadows, df_shadows, weights_path):
     model = tf.keras.applications.DenseNet121(include_top=True, classes=3, pooling=None)
     model.load_weights(weights_path)
     # predict rgb_cuts with loaded model
+
     classes = []
     confidence_scores = []
     predictions = model.predict(rgb_shadows)
