@@ -1,19 +1,17 @@
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
-
+import cv2
 
 """
     Returns:
     updated dataframe with added classification labels and confidence scores
 """
-def classify_shadows(rgb_shadows, df_shadows, weights_path):
+def classify_shadows(rgb_shadows, df_shadows, model):
     # load pretrained model with weights
     # os.chdir(weights_path)
-    print('Loading model..')
-    model = tf.keras.applications.DenseNet121(include_top = True,
-                                              classes = 3, weights = None, pooling = None)
-    model.load_weights(weights_path)
+
+
     # predict rgb_cuts with loaded model
     classes = []
     confidence_scores = []
@@ -40,6 +38,6 @@ def get_prediction_score(img_array, model):
     class_names = ['animal', 'bush', 'tree']
     class_label = class_names[np.argmax(score)]
 
-    confidence_score = round(100 * np.max(score),3)
+    confidence_score = round(100 * np.max(score), 3)
 
     return class_label, confidence_score

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import math
 import cv2
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -309,15 +309,15 @@ def get_shadows(
         image,
         image_name,
         trans_matrix,
-        KER_ER1=np.ones((3, 3), np.uint8),
-        KER_DI1=np.ones((30, 30), np.uint8),
+        KER_ER1=np.ones((7, 7), np.uint8),
+        KER_DI1=np.ones((15, 15), np.uint8),
         KER_ER2=np.ones((7, 7), np.uint8),
         KER_DI2=0,
         X_ADD=50,
         Y_ADD=50,
         X_SIDE='left',
         Y_SIDE='top',
-        MIN_AREA=4600,  # smaller is often grass
+        MIN_AREA=3000,  # smaller is often grass
         MAX_AREA=250000  # larger is often black area outside picture
 ):
     """Cut out shadows after morphological transformation
@@ -381,8 +381,10 @@ def get_shadows(
     # morphological transformation
     mask_morph = _morph(bin_mask, KER_ER1, KER_DI1, KER_ER2, KER_DI2)
     # extract contour df
+
     df_cnt = _analyse_contours(image_name, mask_morph, trans_matrix,
                                MIN_AREA, MAX_AREA)
+    print(df_cnt)
     # cut out contours
     bin_cuts, rgb_cuts = _crop_shadows(df_cnt, mask_morph, image,
                                        X_ADD, Y_ADD, X_SIDE, Y_SIDE)
@@ -392,4 +394,5 @@ def get_shadows(
     df_cnt["line_length"] = line_lengths
     # reset index
     df_cnt = df_cnt.reset_index(drop=True)
+
     return bin_cuts, rgb_cuts, df_cnt

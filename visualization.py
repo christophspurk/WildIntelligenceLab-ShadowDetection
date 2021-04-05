@@ -4,12 +4,7 @@ import cv2
 from skimage.color import label2rgb
 from skimage.measure import label
 
-def classification_visualization(dataframe, bin_mask_shadow, rgb_image):
-    # get pic and convert
-    rgb_img = cv2.imread(rgb_image)
-    rgb_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB)
-
-    bin_img = cv2.imread(bin_mask_shadow)
+def classification_visualization(dataframe, bin_img, rgb_img):
 
     # label the shadows
     bin_img_gray = label(bin_img)
@@ -25,8 +20,8 @@ def classification_visualization(dataframe, bin_mask_shadow, rgb_image):
     for i, rows in z.iterrows():
         z.iloc[i]["x_mask"]
         rgb_img = cv2.rectangle(image_label_overlay, (z.iloc[i]["x_mask"], z.iloc[i]["y_mask"]), (z.iloc[i]["x_mask"]+z.iloc[i]["w_bb"], z.iloc[i]["y_mask"]+z.iloc[i]["h_bb"]), (255,0,0), 5)
-        cv2.putText(image_label_overlay, str(z.iloc[i]["l_length"]), (z.iloc[i]["x_mask"], z.iloc[i]["y_mask"]-20), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255,0,0),2)
+        cv2.putText(image_label_overlay, str(z.iloc[i]["class"]), (z.iloc[i]["x_mask"], z.iloc[i]["y_mask"]-20), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255,0,0),2)
         center_coordinates = (int(z.iloc[i]["x_mask"]+ 0.5 * z.iloc[i]["w_bb"]), int(z.iloc[i]["y_mask"]+ 0.5 * z.iloc[i]["h_bb"]))
-        cv2.circle(image_label_overlay, center_coordinates, 10, (255, 0, 0), 10)
+        cv2.circle(rgb_img, center_coordinates, 10, (255, 0, 0), 10)
     
-    return rgb_image
+    return rgb_img
