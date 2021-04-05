@@ -21,8 +21,6 @@ def main():
     bin_cuts, rgb_cuts, df_morph = get_shadows(bin_mask, image,
                                                image_name, trans_matrix)
 
-    print(df_morph)
-
     df_morph = classify_shadows(rgb_cuts, df_morph, weights_path)
     print(df_morph)
 

@@ -17,13 +17,14 @@ def classify_shadows(rgb_shadows, df_shadows, weights_path):
     # predict rgb_cuts with loaded model
     classes = []
     confidence_scores = []
-    # TODO: fix Error Array Size, DenseNet only accepts shape (224,224,3)
 
     for arr in rgb_shadows:
-        label, score = get_prediction_score(arr, model)
+        # DenseNet only accepts shape (224,224,3)
+        new_size = np.resize(arr, (224,224,3))
+        label, score = get_prediction_score(new_size, model)
         classes.append(label)
         confidence_scores.append(score)
-
+    print(classes)
     df_shadows['class'] = classes
     df_shadows['confidence_score'] = confidence_scores
 
