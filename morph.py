@@ -29,12 +29,16 @@ def _morph(bin_mask, kernel_er1, kernel_di1, kernel_er2, kernel_di2):
 
     if str(kernel_er1) != '0':
         bin_mask = cv2.erode(bin_mask, kernel_er1, iterations=1)
+        cv2.imwrite('img_blogpost/bin_mask_1.png',bin_mask*255)
     if str(kernel_di1) != '0':
         bin_mask = cv2.dilate(bin_mask, kernel_di1, iterations=1)
+        cv2.imwrite('img_blogpost/bin_mask_2.png',bin_mask*255)
     if str(kernel_er2) != '0':
         bin_mask = cv2.erode(bin_mask, kernel_er2, iterations=1)
+        cv2.imwrite('img_blogpost/bin_mask_3.png',bin_mask*255)
     if str(kernel_di2) != '0':
         bin_mask = cv2.dilate(bin_mask, kernel_di2, iterations=1)
+        cv2.imwrite('img_blogpost/bin_mask_4.png',bin_mask*255)
     return bin_mask
 
 
@@ -126,35 +130,40 @@ def _analyse_contours(img_name, mask_morph, trans_matrix, min_area, max_area):
                                            cv2.CHAIN_APPROX_SIMPLE)
     # analyse contours
     i = 0
+    contours_filtered = []
     for c in contours:
-        # get coordinates
-        x, y, w, h = cv2.boundingRect(c)
-        x_slice, y_slice = _get_xy_slice(img_name)
-        # get coordinates in ortho
-        x_ortho = x + x_slice
-        y_ortho = y + y_slice
-        # append to lists in dict
-        features["name"].append(img_name + "_cnt_" + str(i))
-        if trans_matrix != 0:
-            features["gps"].append(trans_matrix * (x_ortho, y_ortho))
-        else:
-            features["gps"].append(0)
-        features["x_ortho"].append(x_ortho)
-        features["y_ortho"].append(y_ortho)
-        features["x_mask"].append(x)
-        features["y_mask"].append(y)
-        features["w_bb"].append(w)
-        features["h_bb"].append(h)
-        # true is used when a closed contour is used as an input
-        features["perimeter"].append(cv2.arcLength(c, True))
-        features["area"].append(cv2.contourArea(c))
-        features["centroid"].append(_center(c))
+        #check if area in required range
+        area = cv2.contourArea(c)
+        if area > min_area and area < max_area:
+            # get coordinates
+            x, y, w, h = cv2.boundingRect(c)
+            x_slice, y_slice = _get_xy_slice(img_name)
+            # get coordinates in ortho
+            x_ortho = x + x_slice
+            y_ortho = y + y_slice
+            # append to lists in dict
+            features["name"].append(img_name + "_cnt_" + str(i))
+            if trans_matrix != 0:
+                features["gps"].append(trans_matrix * (x_ortho, y_ortho))
+            else:
+                features["gps"].append(0)
+            features["x_ortho"].append(x_ortho)
+            features["y_ortho"].append(y_ortho)
+            features["x_mask"].append(x)
+            features["y_mask"].append(y)
+            features["w_bb"].append(w)
+            features["h_bb"].append(h)
+            # true is used when a closed contour is used as an input
+            features["perimeter"].append(cv2.arcLength(c, True))
+            features["area"].append(area)
+            features["centroid"].append(_center(c))
+            contours_filtered.append(c)
         i += 1
     # convert dict into df
     df_feat = pd.DataFrame(features)
-    # filter out to small and to large contours
-    df_feat = df_feat[df_feat["area"] > min_area]
-    df_feat = df_feat[df_feat["area"] < max_area]
+    img_cnt = cv2.cvtColor((mask_morph*255),cv2.COLOR_GRAY2RGB)
+    img_cnt = cv2.drawContours(img_cnt, contours_filtered, -1, (0,170,0), 5)
+    cv2.imwrite('img_blogpost/contours.png',img_cnt)    
     return df_feat
 
 
@@ -309,15 +318,15 @@ def get_shadows(
         image,
         image_name,
         trans_matrix,
-        KER_ER1=np.ones((7, 7), np.uint8),
+        KER_ER1=np.ones((10, 10), np.uint8),
         KER_DI1=np.ones((15, 15), np.uint8),
-        KER_ER2=np.ones((7, 7), np.uint8),
+        KER_ER2=np.ones((3, 3), np.uint8),
         KER_DI2=0,
         X_ADD=50,
         Y_ADD=50,
         X_SIDE='left',
         Y_SIDE='top',
-        MIN_AREA=3000,  # smaller is often grass
+        MIN_AREA=1000,  # smaller is often grass
         MAX_AREA=250000  # larger is often black area outside picture
 ):
     """Cut out shadows after morphological transformation
@@ -379,12 +388,11 @@ def get_shadows(
     """
 
     # morphological transformation
+    cv2.imwrite('img_blogpost/bin_mask_0.png',bin_mask*255)
     mask_morph = _morph(bin_mask, KER_ER1, KER_DI1, KER_ER2, KER_DI2)
     # extract contour df
-
     df_cnt = _analyse_contours(image_name, mask_morph, trans_matrix,
                                MIN_AREA, MAX_AREA)
-    print(df_cnt)
     # cut out contours
     bin_cuts, rgb_cuts = _crop_shadows(df_cnt, mask_morph, image,
                                        X_ADD, Y_ADD, X_SIDE, Y_SIDE)
@@ -394,5 +402,6 @@ def get_shadows(
     df_cnt["line_length"] = line_lengths
     # reset index
     df_cnt = df_cnt.reset_index(drop=True)
-
+    cv2.imwrite('img_blogpost/bin_cut.png',bin_cuts[0]*255)
+    cv2.imwrite('img_blogpost/rgb_cut.png',rgb_cuts[0])
     return bin_cuts, rgb_cuts, df_cnt

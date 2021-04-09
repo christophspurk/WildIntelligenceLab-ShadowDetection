@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def main():
     # for testing purposes
-    img_path = "./test_data/zcropped_2000_3005.jpg"
+    img_path = "./test_data/sample1_2048_2048.png"
     weights_path = "./test_data/epochs_50_lr_0.0001_eps_1e-07_batch_8_pool_Noneweights_16_0.99.hdf5"
     filepath_knn = "./test_data/labels.csv"
     image = cv2.imread(img_path)
