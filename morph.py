@@ -162,7 +162,7 @@ def _analyse_contours(img_name, mask_morph, trans_matrix, min_area, max_area):
     # convert dict into df
     df_feat = pd.DataFrame(features)
     img_cnt = cv2.cvtColor((mask_morph*255),cv2.COLOR_GRAY2RGB)
-    img_cnt = cv2.drawContours(img_cnt, contours_filtered, -1, (0,170,0), 5)
+    img_cnt = cv2.drawContours(img_cnt, contours_filtered, -1, (0,170,0), 10)
     cv2.imwrite('img_blogpost/contours.png',img_cnt)    
     return df_feat
 
@@ -234,7 +234,7 @@ def _crop_shadows(df, bin_mask, image, x_add, y_add, x_side, y_side):
             else:
                 x = 0
         elif x_side == 'right':
-            y = df['x_mask'][i]
+            x = df['x_mask'][i]
         else:
             raise ValueError("x_side must be specified as 'left' or 'right'")
         # adjust bounding box height or width
@@ -318,17 +318,17 @@ def get_shadows(
         image,
         image_name,
         trans_matrix,
-        KER_ER1=np.ones((10, 10), np.uint8),
-        KER_DI1=np.ones((15, 15), np.uint8),
-        KER_ER2=np.ones((3, 3), np.uint8),
+        KER_ER1=np.ones((3, 3), np.uint8),
+        KER_DI1=np.ones((30, 30), np.uint8),
+        KER_ER2=np.ones((7, 7), np.uint8),
         KER_DI2=0,
-        X_ADD=50,
-        Y_ADD=50,
+        X_ADD=0,
+        Y_ADD=0,
         X_SIDE='left',
         Y_SIDE='top',
         MIN_AREA=1000,  # smaller is often grass
         MAX_AREA=250000  # larger is often black area outside picture
-):
+        ):
     """Cut out shadows after morphological transformation
     Function to do morphological transformation on binary masks.
     Afterwards, shadow contours are cut out from the mask and the
@@ -368,7 +368,7 @@ def get_shadows(
         side - left or right - to which the space is added
     Y_SIDE : str (default = 'top')
         side - top or buttom - to which the space is added
-    MIN_AREA : int (default = 4600)
+    MIN_AREA : int (default = 1000)
         min area for contours to be relevant, smaller is often grass
     MAX_AREA : int (default = 25000)
         max area for contours to be relevant, larger is often

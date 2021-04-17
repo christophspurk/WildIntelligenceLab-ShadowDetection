@@ -23,11 +23,11 @@ class MODELS:
         model.load_weights(filepath_class)
         return model # classification result
 
-    def model_predict(self, rgb_img, img_name, trans_matrix):
+    def model_predict(self, rgb_img, img_name, trans_matrix, **kwargs):
         bin_img = get_binary(self.knn_model, rgb_img, 256)
 
         bin_cuts, rgb_cuts, df_morph = get_shadows(bin_img, rgb_img,
-                                                   img_name, trans_matrix)
+                                                   img_name, trans_matrix, **kwargs)
         df_morph = classify_shadows(rgb_cuts, df_morph, self.classification_model)
         rgb_labeled_img = classification_visualization(df_morph, bin_img, rgb_img)
 
