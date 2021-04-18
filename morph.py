@@ -403,5 +403,5 @@ def get_shadows(
     # reset index
     df_cnt = df_cnt.reset_index(drop=True)
     cv2.imwrite('img_blogpost/bin_cut.png',bin_cuts[0]*255)
-    cv2.imwrite('img_blogpost/rgb_cut.png',rgb_cuts[0])
+    ‚
     return bin_cuts, rgb_cuts, df_cnt
