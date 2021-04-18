@@ -18,7 +18,7 @@ def classify_shadows(rgb_shadows, df_shadows, model):
 
     for arr in rgb_shadows:
         # DenseNet only accepts shape (224,224,3)
-        new_size = np.resize(arr, (224,224,3))
+        new_size = cv2.resize(arr, (224,224))
         label, score = get_prediction_score(new_size, model)
         classes.append(label)
         confidence_scores.append(score)
